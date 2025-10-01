@@ -1,3 +1,7 @@
 from django.contrib import admin
+from .models import UserInformation, IdentityInformation, Reservation
 
-# Register your models here.
+
+admin.site.register(UserInformation)
+admin.site.register(IdentityInformation)
+admin.site.register(Reservation)
