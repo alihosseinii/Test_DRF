@@ -5,15 +5,12 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import UserInformation, Reservation, IdentityInformation
 from .serializer import UserLoginSerializer, ReservationSerializer, SingupSerializer, UserInfoSerializer
 from django.contrib.auth import get_user_model
-from drf_yasg.utils import swagger_auto_schema
 User = get_user_model()
 
 class SingupView(generics.CreateAPIView):
-     
-    @swagger_auto_schema(
-        request_body= SingupSerializer,
-        responses={201: "User registered successfully"},
-    )
+    permission_classes = [AllowAny]
+    serializer_class = SingupSerializer
+
     def post(self, request):
         serializer = SingupSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -21,8 +18,6 @@ class SingupView(generics.CreateAPIView):
         return Response({"message": "user registered successfully"}, status=status.HTTP_201_CREATED)
 
 
-    permission_classes = [AllowAny]
-    serializer_class = SingupSerializer
 
 
 class LoginView(generics.GenericAPIView):

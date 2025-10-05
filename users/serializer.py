@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import UserInformation, Reservation, IdentityInformation
 from django.contrib.auth.hashers import make_password
 from train.models import ExistTrains
-
+import re
 
 class SingupSerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,7 +12,14 @@ class SingupSerializer(serializers.ModelSerializer):
             "password": {"write_only": True},
             "phone_number": {"required": True}
         }
+    
 
+    def validate_phone_number(self, value):
+        pattern = r'^09\d{9}$'
+        if not re.match(pattern, value):
+            raise serializers.ValidationError("شماره تلفن باید با 09 شروع شود و دقیقاً 11 رقم عددی باشد.")
+        return value
+    
     def validate(self, data):
         data['username'] = data['phone_number']
         return data
