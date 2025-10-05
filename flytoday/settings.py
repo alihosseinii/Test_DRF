@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework_simplejwt',
     'users',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -108,6 +109,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS' : ['django_filters.rest_framework.DjangoFilterBackend',],
     'DEFAULT_AUTHENTICATION_CLASSES' : ('rest_framework_simplejwt.authentication.JWTAuthentication',),
     'DEFAULT_PERMISSION_CLASSES' : ('rest_framework.permissions.IsAuthenticated',),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 SIMPLE_JWT = {
@@ -138,3 +140,11 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.UserInformation'
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Your Project API',
+    'DESCRIPTION': 'Your project description',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}

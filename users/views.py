@@ -1,43 +1,90 @@
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework import viewsets, status, generics
-from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import UserInformation, Reservation, IdentityInformation
-from .serializer import UserInfoSerializer, ReservationSerializer, loginserializer, singupserializer
+from .serializer import UserLoginSerializer, ReservationSerializer, SingupSerializer, UserInfoSerializer
+from django.contrib.auth import get_user_model
+from drf_yasg.utils import swagger_auto_schema
+User = get_user_model()
 
-class login(APIView):
-    permission_classes = [AllowAny,]
-
+class SingupView(generics.CreateAPIView):
+     
+    @swagger_auto_schema(
+        request_body= SingupSerializer,
+        responses={201: "User registered successfully"},
+    )
     def post(self, request):
-        serializer = loginserializer(data=request.data)
+        serializer = SingupSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "user registered successfully"}, status=status.HTTP_201_CREATED)
+
+
+    permission_classes = [AllowAny]
+    serializer_class = SingupSerializer
+
+
+class LoginView(generics.GenericAPIView):
+    serializer_class = UserLoginSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user = serializer.validated_data["user"]
+        phone = serializer.validated_data["phone_number"]
+        password = serializer.validated_data["password"]
+
+        try:
+            user = UserInformation.objects.get(phone_number=phone)
+        except UserInformation.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not user.check_password(password):
+            return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+
         refresh = RefreshToken.for_user(user)
-
         return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),    
-        }, status= status.HTTP_200_OK)
-    
-
-class singup(generics.CreateAPIView):
-    serializer_class = singupserializer
-    permission_classes = [AllowAny,]
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        })
 
 
-class reservation(generics.CreateAPIView):
+
+from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+class ReservationViewSet(viewsets.ModelViewSet):
     serializer_class = ReservationSerializer
-    permission_classes = [IsAuthenticated,]
-
-
-class ShowTickets(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
     queryset = Reservation.objects.all()
-    serializer_class = ReservationSerializer
+
+    def get_queryset(self):
+        return Reservation.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_destroy(self, instance):
+        instance.delete()
+
+    @action(detail=False, methods=['get'])
+    def my_tickets(self, request):
+        reservations = self.get_queryset()
+        serializer = self.get_serializer(reservations, many=True)
+        return Response(serializer.data)
+
+
 
 class ShowInfo(viewsets.ModelViewSet):
+    serializer_class = UserInfoSerializer
+    permission_classes = [IsAuthenticated]
     queryset = IdentityInformation.objects.all()
-    serializer_class = UserInformation
+    def get_queryset(self):
+        return IdentityInformation.objects.filter(user=self.request.user)
+    
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
