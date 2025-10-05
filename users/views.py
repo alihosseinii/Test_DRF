@@ -1,10 +1,11 @@
 from rest_framework.response import Response
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status, generics, permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import UserInformation, Reservation, IdentityInformation
 from .serializer import UserLoginSerializer, ReservationSerializer, SingupSerializer, UserInfoSerializer
 from django.contrib.auth import get_user_model
+from rest_framework.decorators import action
 User = get_user_model()
 
 class SingupView(generics.CreateAPIView):
@@ -16,8 +17,6 @@ class SingupView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"message": "user registered successfully"}, status=status.HTTP_201_CREATED)
-
-
 
 
 class LoginView(generics.GenericAPIView):
@@ -46,11 +45,6 @@ class LoginView(generics.GenericAPIView):
         })
 
 
-
-from rest_framework import viewsets, permissions
-from rest_framework.decorators import action
-from rest_framework.response import Response
-
 class ReservationViewSet(viewsets.ModelViewSet):
     serializer_class = ReservationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -72,7 +66,6 @@ class ReservationViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-
 class ShowInfo(viewsets.ModelViewSet):
     serializer_class = UserInfoSerializer
     permission_classes = [IsAuthenticated]
@@ -80,6 +73,5 @@ class ShowInfo(viewsets.ModelViewSet):
     def get_queryset(self):
         return IdentityInformation.objects.filter(user=self.request.user)
     
-
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

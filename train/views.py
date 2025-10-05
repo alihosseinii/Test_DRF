@@ -5,10 +5,12 @@ from .serializer import TrainSerializer, CitySerializer, TrainDetailSerializer
 from .filters import filter_trains
 from rest_framework.filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.permissions import AllowAny
 
 class ShowTrainList(viewsets.ReadOnlyModelViewSet):
     queryset = ExistTrains.objects.order_by("depratortime").all()
     filterset_class = filter_trains
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     ordering_feilds = ['origin', 'price', 'depratortime',]
     def get_serializer_class(self):
@@ -19,5 +21,6 @@ class ShowTrainList(viewsets.ReadOnlyModelViewSet):
         return TrainSerializer
 
 class ShowCity(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [AllowAny]
     queryset = City.objects.all()
     serializer_class = CitySerializer

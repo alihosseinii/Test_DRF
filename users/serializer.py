@@ -55,7 +55,7 @@ class TrainSimpleSerializer(serializers.ModelSerializer):
         fields = ['id', 'traintype', 'origin', 'destination', 'depratordate', 'depratortime', 'price']
 
 class ReservationSerializer(serializers.ModelSerializer):
-    train = TrainSimpleSerializer(read_only=True)  # فقط برای نمایش
+    train = TrainSimpleSerializer(read_only=True) 
     
     class Meta:
         model = Reservation
