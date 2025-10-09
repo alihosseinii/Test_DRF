@@ -1,11 +1,12 @@
 from rest_framework.response import Response
-from rest_framework import viewsets, status, generics, permissions
+from rest_framework import viewsets, status, generics, permissions, serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import UserInformation, Reservation, IdentityInformation
 from .serializer import UserLoginSerializer, ReservationSerializer, SingupSerializer, UserInfoSerializer
 from django.contrib.auth import get_user_model
-from rest_framework.decorators import action
+from django.shortcuts import get_object_or_404
+from train.models import ExistTrains
 User = get_user_model()
 
 class SingupView(generics.CreateAPIView):
@@ -47,29 +48,41 @@ class LoginView(generics.GenericAPIView):
 
 class ReservationViewSet(viewsets.ModelViewSet):
     serializer_class = ReservationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     queryset = Reservation.objects.all()
 
     def get_queryset(self):
-        return Reservation.objects.filter(user=self.request.user)
+        return Reservation.objects.filter(user=self.request.user).select_related('train')
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        obj = get_object_or_404(queryset, pk=self.kwargs['pk'])
+        return obj
+
 
     def perform_create(self, serializer):
+
+        reservation: Reservation = serializer.save(user=self.request.user)
+        train: ExistTrains = reservation.train
+        if hasattr(train, 'capacity'):
+            train.capacity = train.capacity - reservation.quantity
+            train.save()
         serializer.save(user=self.request.user)
 
-    def perform_destroy(self, instance):
+
+    def perform_destroy(self, instance: Reservation):
+        train = instance.train
+        if hasattr(train, 'capacity'):
+            train.capacity = train.capacity + instance.quantity
+            train.save()
         instance.delete()
-
-    @action(detail=False, methods=['get'])
-    def my_tickets(self, request):
-        reservations = self.get_queryset()
-        serializer = self.get_serializer(reservations, many=True)
-        return Response(serializer.data)
-
+   
 
 class ShowInfo(viewsets.ModelViewSet):
     serializer_class = UserInfoSerializer
     permission_classes = [IsAuthenticated]
     queryset = IdentityInformation.objects.all()
+
     def get_queryset(self):
         return IdentityInformation.objects.filter(user=self.request.user)
     

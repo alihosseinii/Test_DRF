@@ -26,7 +26,6 @@ class ExistTrains(models.Model):
         پس از حرکت قطار
         %100 جریمه""")
     services = models.TextField(default="catering, train resturant available")
-    #trainstations = models.ArrayField(models.CharField(blank=True))
 
     def __str__(self):
         return f'{self.origin} / to : {self.destination}'

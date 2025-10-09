@@ -3,6 +3,8 @@ from .models import UserInformation, Reservation, IdentityInformation
 from django.contrib.auth.hashers import make_password
 from train.models import ExistTrains
 import re
+from django.utils import timezone
+
 
 class SingupSerializer(serializers.ModelSerializer):
     class Meta:
@@ -54,20 +56,41 @@ class TrainSimpleSerializer(serializers.ModelSerializer):
         model = ExistTrains
         fields = ['id', 'traintype', 'origin', 'destination', 'depratordate', 'depratortime', 'price']
 
+
 class ReservationSerializer(serializers.ModelSerializer):
-    train = TrainSimpleSerializer(read_only=True) 
+    train = TrainSimpleSerializer(read_only=True)
+    train_id = serializers.PrimaryKeyRelatedField(
+        queryset=ExistTrains.objects.all(),
+        write_only=True,
+        source='train',
+        error_messages={'does_not_exist': 'قطار مورد نظر یافت نشد.'}
+    )
     
     class Meta:
         model = Reservation
-        fields = ['id', 'user', 'train', 'quantity', 'total_price', 'reserved_at']
+        fields = ['id', 'user', 'train', 'train_id', 'quantity', 'total_price', 'reserved_at']
         read_only_fields = ['user', 'total_price', 'reserved_at']
 
-    def create(self, validated_data):
-        user = self.context["request"].user
-        return Reservation.objects.create(user=user, **validated_data)
-    
+    def validate_quantity(self, value):
+        if value < 1:
+            raise serializers.ValidationError("تعداد باید حداقل ۱ باشد.")
+        return value
+
+    def validate(self, data):
+        train: ExistTrains = data.get('train')
+        quantity = data.get('quantity', 1)
+
+        if hasattr(train, 'capacity') and train.capacity < quantity:
+            raise serializers.ValidationError({
+                'quantity': f'just {train.capacity} seats are availble.'
+            })
+        return data
 
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = IdentityInformation
         exclude = ['user']
+
+
+
+
